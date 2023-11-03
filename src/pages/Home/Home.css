@@ -11,7 +11,7 @@
 
 .image_box {
   position: relative;
-  border-radius: 6px;
+  border-radius: 6px;  
 }
 
 .image_box:hover .overlay {

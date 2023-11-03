@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import icon from "../../assets/image-icon.png";
 import "./Home.css";
-import PhotoGallery from "../../components/PhotoGallery/PhotoGallery";
 
 interface Gallery {
   id: number;
@@ -14,6 +12,8 @@ const HomeDnd: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [galleryData, setGalleryData] = useState<Gallery[]>([]);
   const [checkedIDs, setCheckedIDs] = useState<number[]>([]);
+  const [draggedImage, setDraggedImage] = useState<Gallery | null>(null);
+  const [dropTarget, setDropTarget] = useState<Gallery | null>(null);
 
   // Add checked ids
   const addToCheckedIds = (id: number) => {
@@ -59,17 +59,56 @@ const HomeDnd: React.FC = () => {
     setCheckedIDs([]);
   };
 
-  const reorderGalleryData = (startIndex: number, endIndex: number) => {
-    const updatedGalleryData = Array.from(galleryData);
-    const [movedItem] = updatedGalleryData.splice(startIndex, 1);
-    updatedGalleryData.splice(endIndex, 0, movedItem);
-    setGalleryData(updatedGalleryData);
-  };
-
+  // Showing featured image at first
   const getOrderedGalleryData = () => {
     const featuredImage = galleryData.find((gallery) => gallery.featured);
     const otherImages = galleryData.filter((gallery) => !gallery.featured);
     return [featuredImage, ...otherImages];
+  };
+
+  // Drag and drop handler
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, gallery: Gallery) => {
+    setDraggedImage(gallery);
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, gallery: Gallery) => {
+    e.preventDefault();
+    setDropTarget(gallery);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDragLeave = () => {
+    setDropTarget(null);
+  };
+
+  const handleDrop = () => {
+    if (draggedImage && dropTarget) {
+      const updatedGalleryData = [...galleryData];
+      const draggedIndex = galleryData.findIndex((gallery) => gallery.id === draggedImage.id);
+      const dropIndex = galleryData.findIndex((gallery) => gallery.id === dropTarget.id);
+
+      if (draggedIndex !== -1 && dropIndex !== -1) {
+        // Swap the positions of the images
+        [updatedGalleryData[draggedIndex], updatedGalleryData[dropIndex]] = [
+          updatedGalleryData[dropIndex],
+          updatedGalleryData[draggedIndex],
+        ];
+
+        // Swap the "featured" status as well
+        [updatedGalleryData[draggedIndex].featured, updatedGalleryData[dropIndex].featured] = [
+          updatedGalleryData[dropIndex].featured,
+          updatedGalleryData[draggedIndex].featured,
+        ];
+
+        setGalleryData(updatedGalleryData);
+      }
+    }
+
+    setDraggedImage(null);
+    setDropTarget(null);
   };
 
   return (
@@ -98,97 +137,83 @@ const HomeDnd: React.FC = () => {
         )}
       </div>
 
-      <DragDropContext
-        onDragEnd={(result) => {
-          if (!result.destination) return;
-          reorderGalleryData(result.source.index, result.destination.index);
-          const draggedImage = galleryData[result.source.index];
-          const updatedImages = [...galleryData];
-          if (result.destination.droppableId === "featured" && !draggedImage.featured) {
-            // If a non-featured image is dropped in the featured section, make it featured
-            draggedImage.featured = true;
-            updatedImages.splice(result.source.index, 1); // Remove the image from its original position
-            updatedImages.unshift(draggedImage); // Add it to the beginning of the array
-            setGalleryData(updatedImages);
-          }
-        }}
-      >
-        <Droppable droppableId="gallery" direction="horizontal">
-          {(provided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef} className="grid_gallery mb-5">
-              {getOrderedGalleryData()
-                .filter((gallery) => gallery)
-                .map((gallery, index) => (
-                  <Draggable key={gallery.id} draggableId={gallery.id.toString()} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={gallery && gallery.featured ? "featured_image" : "single_image"}
-                      >
-                        {gallery && gallery.featured && (
-                          <div className="image_box border border-gray-300">
-                            <div className="checkbox_area">
-                              <input
-                                checked={checkedIDs.includes(gallery.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    addToCheckedIds(gallery.id);
-                                  } else {
-                                    removeFromCheckedIds(gallery.id);
-                                  }
-                                }}
-                                type="checkbox"
-                                className="w-4 h-4 rounded"
-                              />
-                            </div>
-                            <img
-                              className={checkedIDs.includes(gallery.id) ? "selected-image" : ""}
-                              src={gallery.image}
-                              alt="gallery"
-                            />
-                            <div className="overlay"></div>
-                          </div>
-                        )}
-
-                        {gallery && !gallery.featured && (
-                          <div key={gallery.id}>
-                            <div className="image_box border border-gray-300">
-                              <div className="checkbox_area">
-                                <input
-                                  checked={checkedIDs.includes(gallery.id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      addToCheckedIds(gallery.id);
-                                    } else {
-                                      removeFromCheckedIds(gallery.id);
-                                    }
-                                  }}
-                                  type="checkbox"
-                                  className="w-4 h-4 rounded"
-                                />
-                              </div>
-                              <img
-                                className={checkedIDs.includes(gallery.id) ? "selected-image" : ""}
-                                src={gallery.image}
-                                alt="gallery"
-                              />
-                              <div className="overlay"></div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
-
       {isLoading && <p className="text-lg pb-4">Loading...</p>}
+
+      <div className="grid_gallery mb-5">
+        {getOrderedGalleryData().map((gallery, index) => (
+          <div
+            key={gallery?.id ?? index}
+            className={gallery && gallery.featured ? "featured_image" : "single_image"}
+            onDragStart={(e) => handleDragStart(e, gallery ?? ({} as Gallery))}
+            onDragEnter={(e) => handleDragEnter(e, gallery ?? ({} as Gallery))}
+            onDragOver={(e) => handleDragOver(e)}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            draggable
+            style={{
+              transform:
+                draggedImage && dropTarget && gallery?.id === dropTarget.id ? "scale(1.1)" : "",
+            }}
+          >
+            {gallery && gallery.featured && (
+              <div className="image_box border border-gray-300">
+                <div className="checkbox_area">
+                  <input
+                    checked={checkedIDs.includes(gallery.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        addToCheckedIds(gallery.id);
+                      } else {
+                        removeFromCheckedIds(gallery.id);
+                      }
+                    }}
+                    type="checkbox"
+                    className="w-4 h-4 rounded"
+                  />
+                </div>
+                <img
+                  className={checkedIDs.includes(gallery.id) ? "selected-image" : ""}
+                  src={gallery.image}
+                  alt="gallery"
+                />
+                <div className="overlay"></div>
+              </div>
+            )}
+
+            {gallery && !gallery.featured && (
+              <div className="image_box border border-gray-300">
+                <div className="checkbox_area">
+                  <input
+                    checked={checkedIDs.includes(gallery.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        addToCheckedIds(gallery.id);
+                      } else {
+                        removeFromCheckedIds(gallery.id);
+                      }
+                    }}
+                    type="checkbox"
+                    className="w-4 h-4 rounded"
+                  />
+                </div>
+                <img
+                  className={checkedIDs.includes(gallery.id) ? "selected-image" : ""}
+                  src={gallery.image}
+                  alt="gallery"
+                />
+                <div className="overlay"></div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        <div className="border border-gray-300 border-dashed min-h-[150px] rounded-md flex items-center justify-center">
+          <div>
+            <img className="w-[30px] mx-auto" src={icon} alt="gallery" />
+            <p className="text-xl font-medium mt-4">Add Image</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
