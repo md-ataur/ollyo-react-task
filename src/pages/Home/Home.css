@@ -43,6 +43,10 @@
   top: 18px;
 }
 
+.selected-image {
+  opacity: 0.6;
+}
+
 @media (max-width: 768px) {
   .grid_gallery {
     grid-template-columns: repeat(3, 1fr); /* 3 columns */
