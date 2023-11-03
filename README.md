@@ -3,5 +3,11 @@
 ## Instruction
 
 * npm install
-* npm run build
+* npm run dev
+
+## Technology
+* React
+* Typescript
+* Tailwind CSS
+* Custom CSS
 
